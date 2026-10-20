@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LabPulse | Report a lab equipment fault</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #f3f5f9; margin: 0; padding: 24px; color: #1b2430; }
+    .card { max-width: 480px; margin: 0 auto; background: #fff; padding: 24px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,.08); }
+    h1 { margin: 0 0 4px; font-size: 1.5rem; }
+    p.sub { margin: 0 0 20px; color: #5b6675; }
+    label { display: block; margin: 14px 0 4px; font-weight: 600; font-size: .9rem; }
+    input, textarea { width: 100%; box-sizing: border-box; padding: 10px; border: 1px solid #c5ccd6; border-radius: 8px; font: inherit; }
+    textarea { min-height: 100px; resize: vertical; }
+    .err { color: #b3261e; font-size: .8rem; min-height: 1em; margin-top: 2px; }
+    button { margin-top: 18px; width: 100%; padding: 12px; border: 0; border-radius: 8px; background: #1a5fd0; color: #fff; font-size: 1rem; cursor: pointer; }
+    button:disabled { background: #8aa7d9; cursor: not-allowed; }
+    #result { margin-top: 16px; padding: 12px; border-radius: 8px; display: none; }
+    #result.ok { display: block; background: #e3f4e6; color: #1e5a2b; }
+    #result.fail { display: block; background: #fbe4e2; color: #8c1d18; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>LabPulse</h1>
+    <p class="sub">Report a lab equipment fault in under a minute.</p>
+    <form id="form" novalidate>
+      <label for="equipment_id">Equipment ID</label>
+      <input id="equipment_id" name="equipment_id" placeholder="e.g. PC-14" maxlength="20">
+      <div class="err" data-for="equipment_id"></div>
+
+      <label for="lab">Lab</label>
+      <input id="lab" name="lab" placeholder="e.g. Networks Lab" maxlength="50">
+      <div class="err" data-for="lab"></div>
+
+      <label for="description">What is wrong?</label>
+      <textarea id="description" name="description" maxlength="500" placeholder="Describe the problem"></textarea>
+      <div class="err" data-for="description"></div>
+
+      <label for="reporter_email">Your email (optional)</label>
+      <input id="reporter_email" name="reporter_email" type="email" placeholder="you@example.com">
+      <div class="err" data-for="reporter_email"></div>
+
+      <button id="submit" type="submit">Submit report</button>
+    </form>
+    <div id="result" role="status"></div>
+  </div>
+
+  <script>
+    const API_URL = "https://qa8chos6le.execute-api.ap-south-1.amazonaws.com/reports";
+    const form = document.getElementById("form");
+    const result = document.getElementById("result");
+    const submitBtn = document.getElementById("submit");
+
+    // Pre-fill the equipment ID from a QR code link such as ?eq=PC-14
+    const eq = new URLSearchParams(location.search).get("eq");
+    if (eq) document.getElementById("equipment_id").value = eq.slice(0, 20);
+
+    function setErrors(errors) {
+      document.querySelectorAll(".err").forEach(el => {
+        el.textContent = errors[el.dataset.for] || "";
+      });
+    }
+
+    function validate(d) {
+      const e = {};
+      if (!/^[A-Za-z0-9-]{2,20}$/.test(d.equipment_id)) e.equipment_id = "Use 2-20 letters, numbers or hyphens.";
+      if (d.lab.length < 2 || d.lab.length > 50) e.lab = "Lab name must be 2-50 characters.";
+      if (d.description.length < 10 || d.description.length > 500) e.description = "Describe the problem in 10-500 characters.";
+      if (d.reporter_email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(d.reporter_email)) e.reporter_email = "Enter a valid email or leave it blank.";
+      return e;
+    }
+
+    function show(kind, text) {
+      result.className = kind;
+      result.textContent = text;
+    }
+
+    form.addEventListener("submit", async (ev) => {
+      ev.preventDefault();
+      result.className = "";
+      result.textContent = "";
+
+      const data = {
+        equipment_id: form.equipment_id.value.trim(),
+        lab: form.lab.value.trim(),
+        description: form.description.value.trim(),
+        reporter_email: form.reporter_email.value.trim()
+      };
+
+      const errors = validate(data);
+      setErrors(errors);
+      if (Object.keys(errors).length) {
+        show("fail", "Please fix the highlighted fields.");
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Submitting...";
+      try {
+        const res = await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data)
+        });
+        const body = await res.json();
+        if (res.ok && body.ok) {
+          show("ok", "Report submitted. Your report ID is " + body.report_id + ".");
+          form.reset();
+          if (eq) form.equipment_id.value = eq.slice(0, 20);
+        } else {
+          setErrors(body.errors || {});
+          show("fail", body.message || "The server rejected the report.");
+        }
+      } catch (err) {
+        show("fail", "Could not reach the server. Please try again.");
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Submit report";
+      }
+    });
+  </script>
+</body>
+</html>
