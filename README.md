@@ -105,3 +105,9 @@ Delete in this order when the project ends: the S3 bucket (empty it first), the 
 ## Advanced level: honest status
 
 Not completed. Parts that exist: CloudWatch logging, a least-privilege Lambda role, cost controls (Free plan, budget alert, small provisioned capacity), a cleanup plan, and a staff-only access check. Parts not built: RDS, a VPC, CloudFront with HTTPS, per-user authentication, alarms and a repeatable deployment template. RDS and a VPC were not used because DynamoDB fits the access pattern at lower cost and risk.
+## Project materials
+
+- Demo video file: [docs/video/labpulse-demo.mp4](docs/video/labpulse-demo.mp4)
+- Presentation: [docs/presentation/LabPulse-Presentation-Deck.pptx](docs/presentation/LabPulse-Presentation-Deck.pptx)
+- Internship report: [docs/report/LabPulse-Internship-Report.pdf](docs/report/LabPulse-Internship-Report.pdf)
+
