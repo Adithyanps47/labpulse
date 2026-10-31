@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LabPulse | Staff dashboard</title>
+  <style>
+    :root { --ink:#14232e; --muted:#5a6b78; --line:#cfd8df; --bg:#eef2f5; --pulse:#0b7a75;
+            --open:#8a5a00; --open-bg:#fdf1d8; --prog:#1f4f9a; --prog-bg:#e0eafa; --done:#1f6b45; --done-bg:#e1f3e8; --bad:#9b1c1c; }
+    * { box-sizing: border-box; }
+    body { margin:0; padding:24px 16px 48px; background:var(--bg); color:var(--ink); font-family: system-ui, "Segoe UI", sans-serif; line-height:1.45; }
+    .wrap { max-width:1100px; margin:0 auto; }
+    header { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:20px; }
+    .brand { display:flex; align-items:center; gap:10px; font-size:1.35rem; font-weight:700; letter-spacing:-.01em; }
+    .brand svg { width:44px; height:20px; }
+    .brand small { font-weight:500; font-size:.95rem; color:var(--muted); }
+    a.back { color:var(--muted); font-size:.9rem; text-decoration:none; border-bottom:1px solid var(--line); }
+    a.back:hover, a.back:focus-visible { color:var(--pulse); border-color:var(--pulse); }
+    .panel { background:#fff; border:1px solid var(--line); border-radius:10px; padding:16px; margin-bottom:16px; }
+    .bar { display:flex; gap:8px; flex-wrap:wrap; }
+    .bar input { flex:1; min-width:200px; padding:10px 12px; border:1px solid var(--line); border-radius:6px; font:inherit; }
+    button { padding:10px 16px; border:0; border-radius:6px; background:var(--pulse); color:#fff; font:inherit; font-weight:600; cursor:pointer; }
+    button:hover { background:#096560; }
+    button:focus-visible, input:focus-visible, select:focus-visible { outline:3px solid #7cc7c2; outline-offset:1px; }
+    button.ghost { background:#fff; color:var(--ink); border:1px solid var(--line); }
+    button.ghost:hover { background:var(--bg); }
+    button.ghost[aria-pressed="true"] { background:var(--ink); color:#fff; border-color:var(--ink); }
+    #msg { min-height:1.4rem; margin:10px 2px 0; font-size:.92rem; color:var(--muted); }
+    #msg.err { color:var(--bad); }
+    .stats { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:12px; margin-bottom:16px; }
+    .stat { background:#fff; border:1px solid var(--line); border-radius:10px; padding:14px 16px; border-left-width:5px; }
+    .stat b { display:block; font-size:1.7rem; line-height:1.1; }
+    .stat span { color:var(--muted); font-size:.88rem; }
+    .stat.s-open { border-left-color:var(--open); } .stat.s-prog { border-left-color:var(--prog); } .stat.s-done { border-left-color:var(--done); } .stat.s-all { border-left-color:var(--ink); }
+    .filters { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+    .filters button { padding:6px 14px; font-weight:500; }
+    .tablewrap { overflow-x:auto; background:#fff; border:1px solid var(--line); border-radius:10px; }
+    table { width:100%; border-collapse:collapse; min-width:860px; }
+    th, td { padding:11px 12px; text-align:left; border-bottom:1px solid #e6ecf0; vertical-align:top; font-size:.92rem; }
+    th { background:#f6f9fb; font-weight:600; color:var(--muted); font-size:.85rem; }
+    tr:last-child td { border-bottom:0; }
+    td.desc { max-width:300px; }
+    .badge { display:inline-block; padding:2px 10px; border-radius:999px; font-size:.82rem; font-weight:600; white-space:nowrap; }
+    .b-OPEN { background:var(--open-bg); color:var(--open); }
+    .b-IN_PROGRESS { background:var(--prog-bg); color:var(--prog); }
+    .b-RESOLVED { background:var(--done-bg); color:var(--done); }
+    .count { display:inline-block; min-width:2.2em; text-align:center; padding:2px 8px; border-radius:6px; background:#eef2f5; font-weight:600; }
+    .count.hot { background:#fbe4e2; color:var(--bad); }
+    .actions { display:flex; gap:6px; }
+    select { padding:6px; border:1px solid var(--line); border-radius:6px; font:inherit; }
+    .actions button { padding:6px 12px; }
+    .empty { text-align:center; color:var(--muted); padding:28px 12px; }
+    .hint { color:var(--muted); font-size:.85rem; margin-top:10px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <svg viewBox="0 0 44 20" fill="none" stroke="#0b7a75" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 11h9l4-8 6 15 5-10 3 3h15"/></svg>
+        LabPulse <small>Staff dashboard</small>
+      </div>
+      <a class="back" href="index.html">Back to report form</a>
+    </header>
+
+    <div class="panel">
+      <div class="bar">
+        <input id="key" type="password" placeholder="Enter staff key" autocomplete="off" aria-label="Staff key">
+        <button id="load">Load reports</button>
+      </div>
+      <div id="msg" role="status">Enter the staff key to see the reports.</div>
+    </div>
+
+    <div class="stats" id="stats" hidden>
+      <div class="stat s-all"><b id="n-all">0</b><span>All reports</span></div>
+      <div class="stat s-open"><b id="n-open">0</b><span>Open</span></div>
+      <div class="stat s-prog"><b id="n-prog">0</b><span>In progress</span></div>
+      <div class="stat s-done"><b id="n-done">0</b><span>Resolved</span></div>
+    </div>
+
+    <div class="filters" id="filters" hidden>
+      <button class="ghost" data-f="ALL" aria-pressed="true">All</button>
+      <button class="ghost" data-f="OPEN" aria-pressed="false">Open</button>
+      <button class="ghost" data-f="IN_PROGRESS" aria-pressed="false">In progress</button>
+      <button class="ghost" data-f="RESOLVED" aria-pressed="false">Resolved</button>
+    </div>
+
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th>Report</th><th>Equipment</th><th>Lab</th><th>Problem</th><th>Times reported</th><th>Status</th><th>Updated</th><th>Change status</th></tr>
+        </thead>
+        <tbody id="rows"><tr><td class="empty" colspan="8">No reports loaded yet.</td></tr></tbody>
+      </table>
+    </div>
+    <p class="hint">Machines reported 3 or more times are marked in red. Repeated faults can mean the repair did not hold.</p>
+  </div>
+
+<script>
+const API = "https://qa8chos6le.execute-api.ap-south-1.amazonaws.com";
+const keyInput = document.getElementById("key");
+const msg = document.getElementById("msg");
+const rows = document.getElementById("rows");
+const LABELS = { OPEN: "Open", IN_PROGRESS: "In progress", RESOLVED: "Resolved" };
+let reports = [];
+let filter = "ALL";
+
+keyInput.value = sessionStorage.getItem("staffKey") || "";
+
+function say(text, isErr = false) { msg.textContent = text; msg.className = isErr ? "err" : ""; }
+
+function esc(s) { const d = document.createElement("div"); d.textContent = s ?? ""; return d.innerHTML; }
+
+function ago(iso) {
+  const t = Date.parse(iso);
+  if (isNaN(t)) return "";
+  const m = Math.max(0, Math.round((Date.now() - t) / 60000));
+  if (m < 1) return "just now";
+  if (m < 60) return m + " min ago";
+  const h = Math.round(m / 60);
+  if (h < 24) return h + " h ago";
+  return Math.round(h / 24) + " d ago";
+}
+
+async function api(path, method = "GET", body) {
+  const res = await fetch(API + path, {
+    method,
+    headers: { "x-staff-key": keyInput.value.trim(), ...(body ? { "Content-Type": "application/json" } : {}) },
+    body: body ? JSON.stringify(body) : undefined
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || "Request failed (" + res.status + ")");
+  return data;
+}
+
+function render() {
+  const count = s => reports.filter(r => r.status === s).length;
+  document.getElementById("n-all").textContent = reports.length;
+  document.getElementById("n-open").textContent = count("OPEN");
+  document.getElementById("n-prog").textContent = count("IN_PROGRESS");
+  document.getElementById("n-done").textContent = count("RESOLVED");
+
+  const shown = reports.filter(r => filter === "ALL" || r.status === filter);
+  rows.innerHTML = "";
+  if (!shown.length) {
+    rows.innerHTML = '<tr><td class="empty" colspan="8">No reports match this filter.</td></tr>';
+    return;
+  }
+  shown.forEach(r => {
+    const n = Number(r.report_count || 1);
+    const hot = n >= 3 && r.status !== "RESOLVED";
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${esc(r.report_id)}</td>
+      <td><b>${esc(r.equipment_id)}</b></td>
+      <td>${esc(r.lab)}</td>
+      <td class="desc">${esc(r.description)}</td>
+      <td><span class="count${hot ? " hot" : ""}">${n}</span></td>
+      <td><span class="badge b-${esc(r.status)}">${esc(LABELS[r.status] || r.status)}</span></td>
+      <td>${esc(ago(r.updated_at))}</td>
+      <td class="actions">
+        <select aria-label="New status for ${esc(r.report_id)}">
+          <option value="OPEN">Open</option>
+          <option value="IN_PROGRESS">In progress</option>
+          <option value="RESOLVED">Resolved</option>
+        </select>
+        <button>Save</button>
+      </td>`;
+    const sel = tr.querySelector("select");
+    sel.value = r.status;
+    tr.querySelector("button").addEventListener("click", () => updateStatus(r.equipment_id, r.report_id, sel.value));
+    rows.appendChild(tr);
+  });
+}
+
+async function loadReports() {
+  say("Loading reports...");
+  try {
+    const data = await api("/reports");
+    sessionStorage.setItem("staffKey", keyInput.value.trim());
+    reports = data.reports;
+    document.getElementById("stats").hidden = false;
+    document.getElementById("filters").hidden = false;
+    render();
+    say(data.count + " report(s) loaded.");
+  } catch (e) {
+    reports = [];
+    rows.innerHTML = '<tr><td class="empty" colspan="8">No reports loaded.</td></tr>';
+    document.getElementById("stats").hidden = true;
+    document.getElementById("filters").hidden = true;
+    say(e.message === "Failed to fetch"
+      ? "Could not reach the server. Open this page from the website address, not the S3 file link."
+      : e.message, true);
+  }
+}
+
+async function updateStatus(equipmentId, reportId, status) {
+  say("Saving...");
+  try {
+    await api(`/reports/${encodeURIComponent(equipmentId)}/${encodeURIComponent(reportId)}`, "PATCH", { status });
+    await loadReports();
+    say(reportId + " is now " + (LABELS[status] || status).toLowerCase() + ".");
+  } catch (e) { say(e.message, true); }
+}
+
+document.getElementById("load").addEventListener("click", loadReports);
+keyInput.addEventListener("keydown", e => { if (e.key === "Enter") loadReports(); });
+document.querySelectorAll(".filters button").forEach(b => b.addEventListener("click", () => {
+  filter = b.dataset.f;
+  document.querySelectorAll(".filters button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+  render();
+}));
+</script>
+</body>
+</html>
